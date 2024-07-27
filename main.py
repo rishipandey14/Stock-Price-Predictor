@@ -12,9 +12,9 @@ TODAY = date.today().strftime("%Y-%m-%d")
 st.title("Stock Prediction System")
 stocks = ("AAPL","GOOG","MSFT","GME")
 selected_stock = st.selectbox("Select Dataset for Prediction", stocks)
-n_years = ("1","2","3","4")
-selected_years = st.selectbox("Select Years of Prediction", n_years)
-period = selected_years * 365
+
+n_years = st.slider("Years of Prediction:", 1 , 4)
+period = n_years * 365
 
 @st.cache_data
 def load_data(ticker):
@@ -31,11 +31,32 @@ st.subheader('Raw data')
 st.write(data.tail())
 
 
-def plot_raw_data():
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'],name='stock_open'))
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'],name='stock_close'))
-    fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
-    st.plotly_chart(fig)
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'],name='stock_open'))
+fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'],name='stock_close',line = dict(color = 'green')))
+fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
+st.plotly_chart(fig)
 
-plot_raw_data()
+
+# Forecasting
+df_train = data[['Date','Close']]
+
+# prophet accept data in this format
+df_train = df_train.rename(columns={"Date":"ds","Close":"y"})
+
+m = Prophet()
+m.fit(df_train)
+future = m.make_future_dataframe(periods=period)
+forecast = m.predict(future)
+
+st.subheader('Forcast data')
+st.write(forecast.tail())
+
+
+st.write('Forecast data')
+fig1 = plot_plotly(m, forecast)
+st.plotly_chart(fig1)
+
+st.write('Forecast components')
+fig2 = m.plot_components(forecast)
+st.write(fig2)
